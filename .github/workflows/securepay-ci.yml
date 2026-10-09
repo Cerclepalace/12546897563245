@@ -1,0 +1,31 @@
+name: SecurePay CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run tests
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Compile Python files
+        run: python -m compileall src webhook
+      - name: Check secret-like strings
+        run: |
+          if grep -RInE '(sk_live_|pk_live_|-----BEGIN .* PRIVATE KEY-----|cvv|cvc|card_number|pan)' src webhook; then
+            echo 'Potential sensitive string detected; review required.'
+            exit 1
+          fi
